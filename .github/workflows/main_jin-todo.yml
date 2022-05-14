@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - jin-todo
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Log in to registry
+      uses: docker/login-action@v1
+      with:
+        registry: https://acr20220514alterbooth2.azurecr.io/
+        username: ${{ secrets.AzureAppService_ContainerUsername_d99af2f245124cf2b979f962e5917bfb }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_b7ed2e528433419c854d5b1f49458907 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: acr20220514alterbooth2.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_d99af2f245124cf2b979f962e5917bfb }}/jin_study-2:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'jin-todo'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_4eb4f88ecaec4da6ae2f42230681adec }}
+        images: 'acr20220514alterbooth2.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_d99af2f245124cf2b979f962e5917bfb }}/jin_study-2:${{ github.sha }}'
